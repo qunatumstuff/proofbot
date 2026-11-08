@@ -76,11 +76,36 @@ You need Python 3.10 or newer, git, [Switch Console](https://github.com/sandbox-
 git clone https://github.com/qunatumstuff/proofbot
 ```
 
-4. In Switch Console, go to **Templates > Import template** and import `proofbot.template.yaml`. Pick your project folder, the proofbot folder and your chat app.
+4. In Switch Console, go to **Templates > Import template** and import `proofbot.template.yaml`. Pick your project folder, the proofbot folder and your chat app. **On Telegram, import `proofbot-agents.template.yaml` instead:** Switch can't create Telegram groups, so this one creates just the two agents. Then post `!invite-agent @proof-doer` and `!invite-agent @proof-referee` in your group.
 5. Let both agents run `python`. Switch's default auto mode may stop and ask a person before each command, which stalls the room. For a demo, allow it under each agent's settings, or set `auto_approve: true` on both agents in the template if you're happy for them to run without checks.
 6. In the room, ask for something: `@proof-doer Members get 10% off orders over $50, and coupons don't stack.`
 
 `seal` and `finish` can each take a few minutes. A whole job took about 13 minutes in testing.
+
+### Telegram and Windows notes
+
+These are the walls we hit in our real run, and what got us past each one.
+
+- **Telegram bot:** in @BotFather, turn Group Privacy off (`/setprivacy`, your bot, Disable). Otherwise the bot only sees messages that mention the bot itself, not your agents. Add the bot to a group, and Switch links that group to a room.
+- **"Creating channels is turned off for this connection":** that's `proofbot.template.yaml` trying to create a room on Telegram. Use `proofbot-agents.template.yaml`, give it your group's room name (under **Your Rooms**), and invite both agents.
+- **The template form says no agent type is installed**, even though Settings > Agent providers shows Codex signed in: `proofbot-agents.template.yaml` names the provider directly, so it isn't blocked by that check.
+- **Codex on Windows:** each new agent's first command sets up Codex's sandbox and shows a one-time Windows "allow changes" prompt. Click Yes. If it's missed, commands fail with error 1223.
+- **Python not found in the sandbox:** give the agents the full path to a Python it can run. Ours used Codex's bundled one, `%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe`.
+- **git says "dubious ownership":** the sandbox user can't use your project's git folder. The harness has to run outside the sandbox, so approve the agent's request for that.
+- **Handoffs need a mention.** If one agent answers the other without @-mentioning it, the room waits. Mention it to nudge.
+
+## A real run in Telegram
+
+On 8 November 2026 we ran this in our team's Telegram group, with both agents on Codex, set up from `proofbot-agents.template.yaml`:
+
+1. We posted `@proof-doer Clean up inactive users.` It asked how many days counts as inactive. We answered: 365 days or more, paying users are always kept, and inactive non-paying users are disabled, not deleted.
+2. proof-doer wrote its checks and handed over in the room: `@proof-referee seal 7`.
+3. The harness found **3 meanings across 808 inputs** and printed `STOP. Ask the person these before any work starts`. The referee sent the open question to the person who asked, with a targeted message: should a negative number of inactive days keep the user or report an error?
+4. We answered `A` (keep the user). The referee recorded "Snappysnortle decided", with the name taken from Switch, and created the room document "Team decisions". `!list-documents` lists it, created by proof-referee.
+5. After the work, the referee posted the verdict: **DONE, READ THE WARNINGS, job 7, receipt `P7-076e8b51295c`**, with all 1,484 inputs tried and our tests passing before and after. The warnings were real: on the second seal the reviewer's answer couldn't be read, and one reader returned nothing.
+6. We checked the receipt ourselves with `python proof.py --workspace <project> verify 7 P7-076e8b51295c --recheck`, and it printed `VERIFIED`.
+
+That run used the version before the harness could post to the room itself. The direct Switch link has so far been tested against a fake Switch server. The full transcript is in [our blog post](https://dev.to/quantumstuff_378131742ab3/i-made-my-ai-agent-prove-its-work-building-proofbot-with-switch-4g50).
 
 ## Try it without Switch
 
